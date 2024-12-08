@@ -112,7 +112,8 @@ vdu_startup_384:	db		16
 clear_playarea:
 					ld		bc, vdu_clg_end - @vdu_clg_area
 					ld		hl, @vdu_clg_area
-					rst.lil	18h
+					call	batchvdu
+					call	sprite_invalidate_all
 					ret
 
 @vdu_clg_area:
@@ -168,8 +169,9 @@ vsync_counter:		db		0
 
 ;============================================================================================================
 
-
 sendbatchvdu:
+					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+
 					ld		bc,(vdu_buf_count)
 					ld		a,b
 					or		c
@@ -329,6 +331,8 @@ sendbatchvdu:
 @done:
 					ret
 callbatchvdu:
+					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+
 					ld		hl,vdu_call_buffer
 					call	vdu
 initbatchvdu:
@@ -340,11 +344,20 @@ initbatchvdu:
 					ret
 
 callbatchvdu_twice:
+					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+
 					ld		hl,vdu_call_buffer_twice
 					call	vdu
 					jr		initbatchvdu
 
 batchvdu:
+					push	de	
+					rst.lil	$18
+					pop		de
+					ret
+
+					; BATCH VDU BUFFERING DISABLED FOR NOW
+
 					push	de
 					push	hl
 					ld		hl,(vdu_buf_count)
@@ -356,6 +369,8 @@ batchvdu:
 					ld		(vdu_buf_ptr),de
 					pop		de
 					ret
+
+
 
 vdu_buf_count:		dl		0
 vdu_buf_ptr:		dl		0
@@ -412,6 +427,16 @@ gfx_vsync_or_flip:
 					pop		bc
 					ret
 
+
+gfx_flush:
+					push	bc
+					push	hl
+					ld		hl,vdu_flush
+					ld		bc,3
+					call	batchvdu
+					pop		hl
+					pop		bc
+					ret
 ;============================================================================================================
 
 ; BC = x1, DE = y, HL = x2
@@ -649,24 +674,43 @@ gfx_set_pen:
 ;============================================================================================================
 
 ; gfx_draw_bitmap: A = bitmap ID, BC = xpos, DE = ypos
-
 gfx_draw_bitmap:
 					push	ix
-					ld		ix,vdu_draw_bitmap
+					ld		ix,@vdu_draw_bitmap
 					ld		(ix+3),a
-					ld		(ix+8),c
-					ld		(ix+9),b
-					ld		(ix+10),e
-					ld		(ix+11),d
+					ld		(ix+7),c
+					ld		(ix+8),b
+					ld		(ix+9),e
+					ld		(ix+10),d
 					lea		hl,ix+0
-					ld		bc,12
+					ld		bc,11
 					call	batchvdu
 					pop		ix
 					ret
 
-vdu_draw_bitmap:	db 		23, 27, $20, 0, $B1
-					db		23, 27, 3, 0, 0, 0, 0
+@vdu_draw_bitmap:	db 		23, 27, $20, 0, $B1
+					db		25, $ED, 0, 0, 0, 0
+					;db		23, 27, 3, 0, 0, 0, 0
 
+;============================================================================================================
+
+; gfx_draw_bitmap: A = bitmap number (8 bit), BC = xpos, DE = ypos
+gfx_draw_bitmap8:
+					push	ix
+					ld		ix,@vdu_draw_bitmap
+					ld		(ix+3),a
+					ld		(ix+6),c
+					ld		(ix+7),b
+					ld		(ix+8),e
+					ld		(ix+9),d
+					lea		hl,ix+0
+					ld		bc,10
+					call	batchvdu
+					pop		ix
+					ret
+
+@vdu_draw_bitmap:	db 		23, 27, 0, 0
+					db		25, $ED, 0, 0, 0, 0
 ;============================================================================================================
 
 gfx_write_centre_text:
@@ -975,6 +1019,7 @@ vdu_triangle_codes:	db		25, $55, 0, 0, 0, 0			; TRIANGLE x,y
 vdu_fillrect_codes:	db		25, 101, 0, 0, 0, 0			; RECTANGLE FILL x,y
 vdu_flip_codes:		db		23, 0, $C3					; flip screen buffers
 vdu_pen_codes:		db		18, 0,0						; GCOL 0,a
+vdu_flush:			db		23, 0, $CA
 gfx_current_pen:	db		255
 gfx_current_paper:	db		0
 
