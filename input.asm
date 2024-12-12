@@ -11,7 +11,7 @@
 ;
 ;============================================================================================================
 ;
-; Input routines (keyboard, mouse, game controllers)
+; Input routines (keyboard, mouse, game controllers).
 ;
 ; Written by Christian Pinder. 2024
 ;============================================================================================================
@@ -281,6 +281,49 @@ kbd_check_repeat:
 					pop		bc
 					ret
 
+;============================================================================================================
+
+kbd_read_down:
+					push	bc
+					push	hl
+
+					ld		hl,(mos_keymap_addr)
+					ld		b,16
+					ld		c,0
+@loop:
+					ld		a,(hl)
+					or		a
+					jr		nz,@found
+
+					inc		hl
+					inc		c
+					djnz	@loop
+
+; if we get to here then nothing was pressed
+					or		a							; clear the carry flag
+					jr		@done						; pop saved registers and return
+
+; we found a key down
+@found:
+					sla		c
+					sla		c
+					sla		c							; C = C * 8
+@rotate:
+					inc		c
+					rra
+					jr		nc,@rotate
+					scf
+@done:
+					pop		hl
+					pop		bc
+					ret
+
+;============================================================================================================
+
+kbd_wait_key:
+					call	kbd_read_down
+					jr		nc,kbd_wait_key
+					ret
 
 ;============================================================================================================
 

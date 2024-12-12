@@ -11,8 +11,9 @@
 ;
 ;============================================================================================================
 ;
-; Doing sprites like it's 1988
+; Doing sprites like it's 1988.
 ;
+; Written by Christian Pinder. 2024
 ;============================================================================================================
 
 MAX_SPRITES:		EQU		10
@@ -87,8 +88,6 @@ sprite_create:
 					sbc		hl,hl
 					ld		(ix+SP_SX),hl			; sprite screen x
 					ld		(ix+SP_SY),hl			; sprite screen y
-					ld		(ix+SP_W),d				; image width
-					ld		(ix+SP_H),e				; image height
 					ld		(ix+SP_BX),hl			; background x
 					ld		(ix+SP_BY),hl			; background y
 					;or		128
@@ -187,12 +186,24 @@ spr_index:
 ;============================================================================================================
 
 spr_set_image:
-					ld		bc,0
-					ld		c,(ix+SP_CF)
-					ld		hl,(ix+SP_FL)
-					add		hl,bc
-					ld		a,(hl)
+					push	af
+					push	de
+					push	hl
+
+					ld		de,0
+					ld		e,(ix+SP_CF)			; E = sprite current frame
+					ld		hl,(ix+SP_FL)			; HL = address of frame list
+					add		hl,de
+					ld		a,(hl)					; A = image number for current frame
 					ld		(ix+SP_CI),a
+
+					call	gfx_get_bitmap_wh
+					ld		(ix+SP_W),d				; image width
+					ld		(ix+SP_H),e				; image height
+
+					pop		hl
+					pop		de
+					pop		af
 					ret
 
 ;============================================================================================================
@@ -214,19 +225,20 @@ spr_grab_back:
 					ld		bc,(ix+SP_SX)
 					ld		de,(ix+SP_SY)
 					ld		(ix+SP_BS),1
+
 					ld		iy,vdu_save_back
-					ld		(iy+2),c
-					ld		(iy+3),b
-					ld		(iy+4),e
-					ld		(iy+5),d
+					ld		(iy+5),c
+					ld		(iy+6),b
+					ld		(iy+7),e
+					ld		(iy+8),d
 					ld		a,(ix+SP_W)
 					dec		a
-					ld		(iy+8),a
+					ld		(iy+11),a
 					ld		a,(ix+SP_H)
 					dec		a
-					ld		(iy+10),a
+					ld		(iy+13),a
 					ld		a,(ix+SP_BN)
-					ld		(iy+15),a
+					ld		(iy+18),a
 
 					lea		hl,iy+0
 					ld		bc,vdu_save_back_end - vdu_save_back
@@ -341,7 +353,6 @@ spr_xorback:
 					ld		hl,vdu_gcol_paint
 					ld		bc,3
 					call	batchvdu
-
 @noback:
 					call	spr_update_bxy
 					call	spr_grab_back
@@ -352,6 +363,8 @@ spr_xorback:
 ;============================================================================================================
 
 vdu_save_back:
+					db		23, 0, $CA				; flush the render queue
+
 					db		25,4					; move absolute
 					db		0,0						; x
 					db		0,0						; y

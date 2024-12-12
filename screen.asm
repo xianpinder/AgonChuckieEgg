@@ -72,11 +72,13 @@ GFX_PEN_MAGENTA:		EQU		13					; FF00FF
 GFX_PEN_CYAN:			EQU		14					; 00FFFF
 GFX_PEN_WHITE:			EQU		15					; FFFFFF
 
+BMP_INF_SIZE:			EQU		2
+
 ;============================================================================================================
 
 gfx_init_bitmaps:
 					ld		b,IMG_NUM_BITMAPS
-					ld		a,1
+					xor		a
 @loop:
 					ld		hl,(ix+0)
 					lea		ix,ix+3
@@ -170,7 +172,7 @@ vsync_counter:		db		0
 ;============================================================================================================
 
 sendbatchvdu:
-					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+					;ret		; BATCH VDU BUFFERING DISABLED FOR NOW
 
 					ld		bc,(vdu_buf_count)
 					ld		a,b
@@ -331,7 +333,7 @@ sendbatchvdu:
 @done:
 					ret
 callbatchvdu:
-					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+					;ret		; BATCH VDU BUFFERING DISABLED FOR NOW
 
 					ld		hl,vdu_call_buffer
 					call	vdu
@@ -344,20 +346,18 @@ initbatchvdu:
 					ret
 
 callbatchvdu_twice:
-					ret		; BATCH VDU BUFFERING DISABLED FOR NOW
+					;ret		; BATCH VDU BUFFERING DISABLED FOR NOW
 
 					ld		hl,vdu_call_buffer_twice
 					call	vdu
 					jr		initbatchvdu
 
 batchvdu:
-					push	de	
-					rst.lil	$18
-					pop		de
-					ret
-
-					; BATCH VDU BUFFERING DISABLED FOR NOW
-
+					;push	de			; BATCH VDU BUFFERING DISABLED FOR NOW
+					;rst.lil	$18
+					;pop		de
+					;ret
+				
 					push	de
 					push	hl
 					ld		hl,(vdu_buf_count)
@@ -673,6 +673,34 @@ gfx_set_pen:
 
 ;============================================================================================================
 
+gfx_gcol_xor:
+					push	bc
+					push	de
+					push	hl
+					ld		hl,vdu_gcol_xor
+					ld		bc,3
+					call	batchvdu
+					pop		hl
+					pop		de
+					pop		bc
+					ret
+
+;============================================================================================================
+
+gfx_gcol_paint:
+					push	bc
+					push	de
+					push	hl
+					ld		hl,vdu_gcol_paint
+					ld		bc,3
+					call	batchvdu
+					pop		hl
+					pop		de
+					pop		bc
+					ret
+
+;============================================================================================================
+
 ; gfx_draw_bitmap: A = bitmap ID, BC = xpos, DE = ypos
 gfx_draw_bitmap:
 					push	ix
@@ -911,6 +939,22 @@ txt_start_x:		db		0
 
 ;============================================================================================================
 
+; gfx_get_bitmap_wh: A = image number. Returns D = width, E = height
+gfx_get_bitmap_wh:
+					push	hl
+					ld		h,BMP_INF_SIZE
+					ld		l,a
+					mlt		hl
+					ld		de,bitmap_info
+					add		hl,de
+					ld		d,(hl)
+					inc		hl
+					ld		e,(hl)
+					pop		hl
+					ret
+
+;============================================================================================================
+
 ; gfx_upload_bitmap: convert an indexed bitmap to ABGR 8-bit (RGBA2222) and upload it to the VDP
 ; HL = address of bitmap data
 ; A = bitmap number
@@ -918,6 +962,7 @@ gfx_upload_bitmap:
 					push	af
 					push	bc
 					push	ix
+					push	iy
 
 					ld		(bitmap_buffer_id1),a
 					ld		(bitmap_buffer_id2),a
@@ -926,10 +971,18 @@ gfx_upload_bitmap:
 					push	hl
 					pop		ix							; IX = HL = start of bitmap data
 
-					ld		h,(ix + 0)					; B = width of bitmap
-					ld		l,(ix + 1)					; C = height of bitmap
+					ld		h,(ix+0)					; H = width of bitmap
+					ld		l,(ix+1)					; L = height of bitmap
 					inc		ix
 					inc		ix
+
+					ld		b,BMP_INF_SIZE
+					ld		c,a
+					mlt		bc
+					ld		iy,bitmap_info
+					add		iy,bc
+					ld		(iy+0),h
+					ld		(iy+1),l					; save width and height for future reference
 
 					ld		a,h
 					ld		(bitmap_buffer_w),a
@@ -972,6 +1025,7 @@ gfx_upload_bitmap:
 					ld		bc,13
 					rst.lil	18h
 
+					pop		iy
 					pop		ix
 					pop		bc
 					pop		af
@@ -1030,5 +1084,7 @@ txt_screen_rows:	dw		0, 9, 19, 28, 38, 48, 57, 67, 76, 86, 96, 105, 115, 124, 13
 
 double_buffer:		db		0
 frame_counter:		dl		0
+
+bitmap_info:		ds		IMG_NUM_BITMAPS * BMP_INF_SIZE
 
 ;============================================================================================================

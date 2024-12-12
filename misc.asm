@@ -322,36 +322,46 @@ minAL:
 
 ; maxHLDE: HL = max(HL,DE)
 maxHLDE:
-					or a
-					sbc hl,de
-					add hl,de
-					ret	nc
-					ex	de,hl
+					or		a
+					sbc		hl,de
+					add		hl,de
+					ret		nc
+					ex		de,hl
 					ret
 
 ;============================================================================================================
 
 ; minHLDE: HL = min(HL,DE)
 minHLDE:
-					or a
-					sbc hl,de
-					add hl,de
-					ret	c
-					ex	de,hl
+					or		a
+					sbc		hl,de
+					add		hl,de
+					ret		c
+					ex		de,hl
 					ret
 
 ;============================================================================================================
 
 ; HL = abs(HL)
 absHL:
-					ex de,hl
+					ex		de,hl
 ; HL = abs(DE)
 absDE:
-					or a,a
-					sbc hl,hl
-					sbc hl,de
-					ret p
-					ex de,hl
+					or		a,a
+					sbc		hl,hl
+					sbc		hl,de
+					ret		p
+					ex		de,hl
+					ret
+
+;============================================================================================================
+
+addHLA:
+					push	de
+					ld		de,0
+					ld		e,a
+					add		hl,de
+					pop		de
 					ret
 
 ;============================================================================================================
