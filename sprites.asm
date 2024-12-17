@@ -21,18 +21,17 @@ SPR_INF_SIZE:		EQU		50
 
 ; Four types of sprite are supported:
 ;
-; SPR_TYPE_PAINT:	A write-only sprite. Draws the sprite on to the screen but has no way of undrawing it.
-;					Use this if you are double-buffering and re-drawing the playfield every frame.
+; SPR_TYPE_PAINT:	 A write-only sprite. Draws the sprite on to the screen but has no way of undrawing it.
+;					 Use this if you are double-buffering and re-drawing the playfield every frame.
 ;
-; SPR_TYPE_XOR:		Xor on, Xor off. Simple sprite that uses xor to write and remove it
-;					If the sprite goes over something then the colours will look odd. You can use palette to fix this.
+; SPR_TYPE_XOR:		 Xor on, Xor off. Simple sprite that uses xor to write and remove it.
+;					 If the sprite goes over something then the colours will look odd. You can use the palette to fix this.
 ;
-;SPR_TYPE_SAVEBACK:	Saves the background before painting the sprite. Uses saved background to erase sprite.
-;					Doesn't play well with overlapping sprites. Very fussy about the draw order.
+; SPR_TYPE_SAVEBACK: Saves the background before painting the sprite. Uses saved background to erase sprite.
+;					 Doesn't play well with overlapping sprites. Very fussy about the draw order.
 ;
-;SPR_TYPE_XORBACK:	Uses xor trickery to allow SAVEBACK type sprites to be drawn/undrawn/redrawn in any order.
-;					You can even use XOR and XORBACK sprites together without worring about overlap.
-;					Bit buggy on real hardware at the moment. Work in progress.
+; SPR_TYPE_XORBACK:	 Uses xor trickery to allow SAVEBACK type sprites to be drawn/undrawn/redrawn in any order.
+;					 You can even use XOR and XORBACK sprites together without worring about overlap.
 
 SPR_TYPE_PAINT:		EQU		0
 SPR_TYPE_XOR:		EQU		1

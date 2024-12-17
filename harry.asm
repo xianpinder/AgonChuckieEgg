@@ -390,7 +390,12 @@ update_harry_xy:
 					ld		hl,num_eggs
 					dec		(hl)
 
-; TODO make egg collected sound
+; make egg collected sound
+					ld		a,6
+					ld		c,0
+					ld		d,3
+					ld		b,100
+					call	snd_play_beeb_sound
 
 ; TODO score points
 					ret	
@@ -400,7 +405,12 @@ update_harry_xy:
 					xor		a
 					call	set_grid_cell
 
-; TODO make grain collected sound
+; make grain collected sound
+					ld		a,5
+					ld		c,0
+					ld		d,3
+					ld		b,100
+					call	snd_play_beeb_sound
 
 ; TODO score points
 
@@ -951,6 +961,82 @@ ride_lift:
 					ld		(harry_killed),a
 @nottop:
 					jp		update_harry_xy
+
+
+;============================================================================================================
+
+harry_sounds:
+					ld		a,(harry_move_x)
+					ld		b,a
+					ld		a,(harry_move_y)
+					or		b
+					ret		z
+
+					ld		a,(update_counter)
+					rra
+					ret		c
+
+					ld		a,(harry_move_type)
+					or		a
+					jr		nz,@not_horiz
+
+; walking sound
+					ld		a,100
+					jr		@blipsound
+@not_horiz:
+					dec		a
+					jr		nz,@notladder
+
+; climbing ladder sound
+					ld		a,150			; pitch 150
+					jr		@blipsound
+@notladder:
+					dec		a
+					jr		nz,@notjumping
+
+					ld		a,(harry_jump_fdist)
+					ld		b,a
+					cp		11
+					jr		c,@jumpup
+
+; jump going down sound
+					ld		a,$BE
+					sub		b
+					sub		b
+					jr		@blipsound
+@jumpup:
+
+; jump going up sound
+					ld		a,$96
+					add		a,b
+					add		a,b
+					jr		@blipsound
+
+@notjumping:
+					dec		a
+					jr		nz,@notfall
+
+					ld		a,(harry_jump_fdist)
+					ld		b,a
+					ld		a,$6E
+					sub		b
+					sub		b
+					jr		@blipsound
+
+@notfall:
+; we must be on a lift
+; only make sound if walking
+					ld		a,(harry_move_x)
+					or		a
+					ret		z
+
+					ld		a,100
+
+@blipsound:
+					ld		b,100			; target volume 100
+					ld		c,1				; channel 1
+					ld		d,0				; duration 1/20 ms
+					jp		snd_play_beeb_sound
 
 ;============================================================================================================
 

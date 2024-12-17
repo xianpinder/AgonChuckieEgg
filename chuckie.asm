@@ -89,6 +89,7 @@ VIEW_Y_OFFSET:		EQU		84
 					INCLUDE "misc.asm"
 					INCLUDE "time.asm"
 					INCLUDE "sprites.asm"
+					INCLUDE "sound.asm"
 					INCLUDE "harry.asm"
 					INCLUDE "birds.asm"
 					INCLUDE	"levels.asm"
@@ -122,9 +123,11 @@ main:
 @newmodes:
                     call    gfx_init_384
 					call	kbd_init
+					call	snd_init
 					call	initbatchvdu
 					call	update_gtime
 					call	create_sprites
+					call	init_sounds
 
 					xor		a
 					call	expand_level
@@ -184,6 +187,7 @@ main:
 
 					call	draw_lifts
 					call	draw_harry
+					call	harry_sounds
 					call	gfx_vsync
 					call	draw_birds
 
@@ -199,8 +203,6 @@ create_sprites:
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,9
 					ld		hl,harry_frames
-					;ld		d,24
-					;ld		e,24
 					call	sprite_create
 					ld		a,SPR_HARRY
 					ld		b,0
@@ -210,24 +212,18 @@ create_sprites:
 					ld		c,SPR_TYPE_XOR
 					ld		b,1
 					ld		hl,lift_frames
-					;ld		d,39
-					;ld		e,6
 					call	sprite_create
 
 					ld		a,SPR_LIFT2
 					ld		c,SPR_TYPE_XOR
 					ld		b,1
 					ld		hl,lift_frames
-					;ld		d,39
-					;ld		e,6
 					call	sprite_create
 
 					ld		a,SPR_OSTRICH1
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,10
 					ld		hl,ostrich_frames
-					;ld		d,24
-					;ld		e,30
 					call	sprite_create
 
 
@@ -235,34 +231,49 @@ create_sprites:
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,10
 					ld		hl,ostrich_frames
-					;ld		d,24
-					;ld		e,30
 					call	sprite_create
 
 					ld		a,SPR_OSTRICH3
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,10
 					ld		hl,ostrich_frames
-					;ld		d,24
-					;ld		e,30
 					call	sprite_create
 
 					ld		a,SPR_OSTRICH4
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,10
 					ld		hl,ostrich_frames
-					;ld		d,24
-					;ld		e,30
 					call	sprite_create
 
 					ld		a,SPR_OSTRICH5
 					ld		c,SPR_TYPE_XORBACK
 					ld		b,10
 					ld		hl,ostrich_frames
-					;ld		d,24
-					;ld		e,30
 					call	sprite_create
 					ret
+
+;============================================================================================================
+
+init_sounds:
+					ld		hl,vol_env_1
+					call	snd_set_vol_env
+
+					ld		hl,vol_env_3
+					call	snd_set_vol_env
+					ret
+
+
+vol_env_1:			db		1			; channel 1
+					dw		10			; attack for 10ms
+					dw		10			; decay for 10ms
+					db		0			; no sustain
+					dw		0			; no release
+
+vol_env_3:			db		0			; channel 1
+					dw		20			; attack for 10ms
+					dw		0			; no decay
+					db		127			; sustain at target volume
+					dw		10			; release for 10ms
 
 ;============================================================================================================
 
