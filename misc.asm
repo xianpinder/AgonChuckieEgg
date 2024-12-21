@@ -102,6 +102,10 @@ index_array:
 
 ; unsigned HL to ascii string. HL = number to convert, IX = address of string space, A = num digits, Carry set = div 10
 fmt_uhltoa:
+					push	bc
+					push	de
+					push	hl
+
 					push	af
 					ld		c,a
 					ld		b,7
@@ -135,6 +139,12 @@ fmt_uhltoa:
 					inc		ix
 @nodot2:
 					ld		de,-1
+					call	@num1
+
+					pop		hl
+					pop		de
+					pop		bc
+					ret
 
 @num1:
 					ld		a,'0'-1

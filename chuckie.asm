@@ -44,8 +44,15 @@ IMG_OSY_EAT_RIGHT_1: EQU	22
 IMG_OSY_EAT_RIGHT_2: EQU	23
 IMG_OSY_EAT_LEFT_1:	EQU		24
 IMG_OSY_EAT_LEFT_2:	EQU		25
+IMG_LET_C:			EQU		26
+IMG_LET_H:			EQU		27
+IMG_LET_U:			EQU		28
+IMG_LET_K:			EQU		29
+IMG_LET_I:			EQU		30
+IMG_LET_E:			EQU		31
+IMG_LET_G:			EQU		32
 
-IMG_NUM_BITMAPS:	EQU		26
+IMG_NUM_BITMAPS:	EQU		33
 
 SPR_HARRY:			EQU		0
 SPR_LIFT1:			EQU		1
@@ -93,6 +100,7 @@ VIEW_Y_OFFSET:		EQU		84
 					INCLUDE "harry.asm"
 					INCLUDE "birds.asm"
 					INCLUDE	"levels.asm"
+					INCLUDE	"attract.asm"
 
 ;============================================================================================================
 
@@ -128,6 +136,8 @@ main:
 					call	update_gtime
 					call	create_sprites
 					call	init_sounds
+
+					call	title_screen
 
 					xor		a
 					call	expand_level
@@ -799,11 +809,11 @@ ostrich_frames:		db		IMG_OSY_RIGHT_1, IMG_OSY_RIGHT_2, IMG_OSY_LEFT_1, IMG_OSY_L
 					db		IMG_OSY_CLIMB_1, IMG_OSY_CLIMB_2
 					db		IMG_OSY_EAT_RIGHT_1, IMG_OSY_EAT_RIGHT_2, IMG_OSY_EAT_LEFT_1, IMG_OSY_EAT_LEFT_2
 
-key_num_right:		db		KBD_X
-key_num_left:		db		KBD_Z
-key_num_down:		db		KBD_COMMA
-key_num_up:			db		KBD_L
-key_num_jump:		db		KBD_SEMICOLON
+key_num_up:			db		KBD_A
+key_num_down:		db		KBD_Z
+key_num_left:		db		KBD_COMMA
+key_num_right:		db		KBD_PERIOD
+key_num_jump:		db		KBD_SPACE
 key_bits:			db		0
 
 ;============================================================================================================
@@ -835,6 +845,13 @@ images_384:
 					dl		birdeatright2_img
 					dl		birdeatleft1_img
 					dl		birdeatleft2_img
+					dl		let_c_img
+					dl		let_h_img
+					dl		let_u_img
+					dl		let_k_img
+					dl		let_i_img
+					dl		let_e_img
+					dl		let_g_img
 
 
 blank384_img:		db		24,12
@@ -905,6 +922,21 @@ birdeatleft1_img:	db		48,30
 					incbin	"gfx/birdeatleft1.raw"
 birdeatleft2_img:	db		48,30
 					incbin	"gfx/birdeatleft2.raw"
+
+let_c_img:			db		45,45
+					incbin	"gfx/letc.raw"
+let_h_img:			db		45,45
+					incbin	"gfx/leth.raw"
+let_u_img:			db		45,45
+					incbin	"gfx/letu.raw"
+let_k_img:			db		45,45
+					incbin	"gfx/letk.raw"
+let_i_img:			db		45,45
+					incbin	"gfx/leti.raw"
+let_e_img:			db		45,45
+					incbin	"gfx/lete.raw"
+let_g_img:			db		45,45
+					incbin	"gfx/letg.raw"
 
 ;============================================================================================================
 sys_timer_addr:		dl		0

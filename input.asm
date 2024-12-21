@@ -312,6 +312,8 @@ kbd_read_down:
 					inc		c
 					rra
 					jr		nc,@rotate
+					dec		c
+					ld		a,c
 					scf
 @done:
 					pop		hl
@@ -327,6 +329,26 @@ kbd_wait_key:
 
 ;============================================================================================================
 
+kbd_wait_nokey:
+					call	kbd_read_down
+					jr		c,kbd_wait_nokey
+					ret
+
+;============================================================================================================
+
+kbd_get_keyname:
+					push	de
+					ld		h,a
+					ld		l,3
+					mlt		hl
+					ld		de,keyname_table
+					add		hl,de
+					ld		hl,(hl)
+					pop		de
+					ret
+
+;============================================================================================================
+
 kbd_timer:			dl		0,0				; ix+0, ix+3
 					dl		0				; ix+6
 					dl		0				; ix+9
@@ -335,6 +357,161 @@ kbd_repeat:			dl		0
 
 kbd_states:			ds		KBD_NUM_KEYS
 
+;============================================================================================================
 
+txt_keyname_0:		db		0
+txt_keyname_1:		db		0
+txt_keyname_2:		db		0
+txt_keyname_3:		db		"Left Shift",0
+txt_keyname_4:		db		"Left Ctrl",0
+txt_keyname_5:		db		"Left Alt",0
+txt_keyname_6:		db		"Right Shift",0
+txt_keyname_7:		db		"Right Ctrl",0
+txt_keyname_8:		db		"Right Alt",0
+txt_keyname_9:		db		0
+txt_keyname_10:		db		0
+txt_keyname_11:		db		0
+txt_keyname_12:		db		0
+txt_keyname_13:		db		0
+txt_keyname_14:		db		0
+txt_keyname_15:		db		0
+txt_keyname_16:		db		"Q",0
+txt_keyname_17:		db		"3",0
+txt_keyname_18:		db		"4",0
+txt_keyname_19:		db		"5",0
+txt_keyname_20:		db		"F4",0
+txt_keyname_21:		db		"8",0
+txt_keyname_22:		db		"F7",0
+txt_keyname_23:		db		"-",0
+txt_keyname_24:		db		"^",0
+txt_keyname_25:		db		"Left Arrow",0
+txt_keyname_26:		db		"Key Pad 6",0
+txt_keyname_27:		db		"Key Pad 7",0
+txt_keyname_28:		db		"F11",0
+txt_keyname_29:		db		"F12",0
+txt_keyname_30:		db		"F10",0
+txt_keyname_31:		db		"Sroll Lock",0
+txt_keyname_32:		db		"Print Screen",0
+txt_keyname_33:		db		"W",0
+txt_keyname_34:		db		"E",0
+txt_keyname_35:		db		"T",0
+txt_keyname_36:		db		"7",0
+txt_keyname_37:		db		"I",0
+txt_keyname_38:		db		"9",0
+txt_keyname_39:		db		"0",0
+txt_keyname_40:		db		0
+txt_keyname_41:		db		"Down Arrow",0
+txt_keyname_42:		db		"Key Pad 8",0
+txt_keyname_43:		db		"Key Pad 9",0
+txt_keyname_44:		db		"Break",0
+txt_keyname_45:		db		"`",0
+txt_keyname_46:		db		0
+txt_keyname_47:		db		"Backspace",0
+txt_keyname_48:		db		"1",0
+txt_keyname_49:		db		"2",0
+txt_keyname_50:		db		"D",0
+txt_keyname_51:		db		"R",0
+txt_keyname_52:		db		"6",0
+txt_keyname_53:		db		"U",0
+txt_keyname_54:		db		"O",0
+txt_keyname_55:		db		"P",0
+txt_keyname_56:		db		"[",0
+txt_keyname_57:		db		"Up Arrow",0
+txt_keyname_58:		db		"Key Pad +",0
+txt_keyname_59:		db		"Key Pad -",0
+txt_keyname_60:		db		"Key Pad Enter",0
+txt_keyname_61:		db		"Insert",0
+txt_keyname_62:		db		"Home",0
+txt_keyname_63:		db		"Page Up",0
+txt_keyname_64:		db		"Caps Lock",0
+txt_keyname_65:		db		"A",0
+txt_keyname_66:		db		"X",0
+txt_keyname_67:		db		"F",0
+txt_keyname_68:		db		"Y",0
+txt_keyname_69:		db		"J",0
+txt_keyname_70:		db		"K",0
+txt_keyname_71:		db		"@",0
+txt_keyname_72:		db		":",0
+txt_keyname_73:		db		"Return",0
+txt_keyname_74:		db		"Key Pad /",0
+txt_keyname_75:		db		"Key Pad Del",0
+txt_keyname_76:		db		"Key Pad .",0
+txt_keyname_77:		db		"Num Lock",0
+txt_keyname_78:		db		"Page Down",0
+txt_keyname_79:		db		0
+txt_keyname_80:		db		0
+txt_keyname_81:		db		"S",0
+txt_keyname_82:		db		"C",0
+txt_keyname_83:		db		"G",0
+txt_keyname_84:		db		"H",0
+txt_keyname_85:		db		"N",0
+txt_keyname_86:		db		"L",0
+txt_keyname_87:		db		";",0
+txt_keyname_88:		db		"]",0
+txt_keyname_89:		db		"Delete",0
+txt_keyname_90:		db		0
+txt_keyname_91:		db		"Key Pad *",0
+txt_keyname_92:		db		0
+txt_keyname_93:		db		"=",0
+txt_keyname_94:		db		0
+txt_keyname_95:		db		"_",0
+txt_keyname_96:		db		"Tab",0
+txt_keyname_97:		db		"Z",0
+txt_keyname_98:		db		"Space",0
+txt_keyname_99:		db		"V",0
+txt_keyname_100:	db		"B",0
+txt_keyname_101:	db		"M",0
+txt_keyname_102:	db		",",0
+txt_keyname_103:	db		".",0
+txt_keyname_104:	db		"Slash",0
+txt_keyname_105:	db		"End",0
+txt_keyname_106:	db		"Key Pad 0",0
+txt_keyname_107:	db		"Key Pad 1",0
+txt_keyname_108:	db		"Key Pad 3",0
+txt_keyname_109:	db		0
+txt_keyname_110:	db		0
+txt_keyname_111:	db		0
+txt_keyname_112:	db		"Esc",0
+txt_keyname_113:	db		"F1",0
+txt_keyname_114:	db		"F2",0
+txt_keyname_115:	db		"F3",0
+txt_keyname_116:	db		"F5",0
+txt_keyname_117:	db		"F6",0
+txt_keyname_118:	db		"F8",0
+txt_keyname_119:	db		"F9",0
+txt_keyname_120:	db		0
+txt_keyname_121:	db		"Right Arrow",0
+txt_keyname_122:	db		"Key Pad 4",0
+txt_keyname_123:	db		"Key Pad 5",0
+txt_keyname_124:	db		"Key Pad 2",0
+txt_keyname_125:	db		"Left GUI",0
+txt_keyname_126:	db		"Right GUI",0
+txt_keyname_127:	db		"App",0
 
-
+keyname_table:
+					dl		txt_keyname_0,   txt_keyname_1,   txt_keyname_2,   txt_keyname_3,   txt_keyname_4
+					dl		txt_keyname_5,   txt_keyname_6,   txt_keyname_7,   txt_keyname_8,   txt_keyname_9 
+					dl		txt_keyname_10,  txt_keyname_11,  txt_keyname_12,  txt_keyname_13,  txt_keyname_14
+					dl		txt_keyname_15,  txt_keyname_16,  txt_keyname_17,  txt_keyname_18,  txt_keyname_19
+					dl		txt_keyname_20,  txt_keyname_21,  txt_keyname_22,  txt_keyname_23,  txt_keyname_24
+					dl		txt_keyname_25,  txt_keyname_26,  txt_keyname_27,  txt_keyname_28,  txt_keyname_29
+					dl		txt_keyname_30,  txt_keyname_31,  txt_keyname_32,  txt_keyname_33,  txt_keyname_34 
+					dl		txt_keyname_35,  txt_keyname_36,  txt_keyname_37,  txt_keyname_38,  txt_keyname_39
+					dl		txt_keyname_40,  txt_keyname_41,  txt_keyname_42,  txt_keyname_43,  txt_keyname_44
+					dl		txt_keyname_45,  txt_keyname_46,  txt_keyname_47,  txt_keyname_48,  txt_keyname_49
+					dl		txt_keyname_50,  txt_keyname_51,  txt_keyname_52,  txt_keyname_53,  txt_keyname_54
+					dl		txt_keyname_55,  txt_keyname_56,  txt_keyname_57,  txt_keyname_58,  txt_keyname_59
+					dl		txt_keyname_60,  txt_keyname_61,  txt_keyname_62,  txt_keyname_63,  txt_keyname_64
+					dl		txt_keyname_65,  txt_keyname_66,  txt_keyname_67,  txt_keyname_68,  txt_keyname_69
+					dl		txt_keyname_70,  txt_keyname_71,  txt_keyname_72,  txt_keyname_73,  txt_keyname_74
+					dl		txt_keyname_75,  txt_keyname_76,  txt_keyname_77,  txt_keyname_78,  txt_keyname_79
+					dl		txt_keyname_80,  txt_keyname_81,  txt_keyname_82,  txt_keyname_83,  txt_keyname_84 
+					dl		txt_keyname_85,  txt_keyname_86,  txt_keyname_87,  txt_keyname_88,  txt_keyname_89
+					dl		txt_keyname_90,  txt_keyname_91,  txt_keyname_92,  txt_keyname_93,  txt_keyname_94
+					dl		txt_keyname_95,  txt_keyname_96,  txt_keyname_97,  txt_keyname_98,  txt_keyname_99
+					dl		txt_keyname_100, txt_keyname_101, txt_keyname_102, txt_keyname_103, txt_keyname_104
+					dl		txt_keyname_105, txt_keyname_106, txt_keyname_107, txt_keyname_108, txt_keyname_109
+					dl		txt_keyname_110, txt_keyname_111, txt_keyname_112, txt_keyname_113, txt_keyname_114
+					dl		txt_keyname_115, txt_keyname_116, txt_keyname_117, txt_keyname_118, txt_keyname_119
+					dl		txt_keyname_120, txt_keyname_121, txt_keyname_122, txt_keyname_123, txt_keyname_124
+					dl		txt_keyname_125, txt_keyname_126, txt_keyname_127
