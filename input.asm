@@ -430,7 +430,7 @@ txt_keyname_67:		db		"F",0
 txt_keyname_68:		db		"Y",0
 txt_keyname_69:		db		"J",0
 txt_keyname_70:		db		"K",0
-txt_keyname_71:		db		"@",0
+txt_keyname_71:		db		"'",0
 txt_keyname_72:		db		":",0
 txt_keyname_73:		db		"Return",0
 txt_keyname_74:		db		"Key Pad /",0
