@@ -24,15 +24,6 @@
 ;============================================================================================================
 
 draw_harry:
-					ld		a,0
-					call	gfx_set_pen
-					ld		bc,0
-					ld		de,0
-					call	gfx_move
-					ld		bc,511
-					ld		de,45
-					call	gfx_draw_filled_rect
-
 					ld		a,(harry_x)
 					ld		d,a
 					ld		a,(harry_y)
@@ -47,8 +38,6 @@ draw_harry:
 
 					;call	debug_harry
 					ret
-
-
 
 ;============================================================================================================
 
@@ -397,7 +386,19 @@ update_harry_xy:
 					ld		b,100
 					call	snd_play_beeb_sound
 
-; TODO score points
+; score points
+					ld		a,(level)
+					srl		a
+					srl		a
+					inc		a
+					cp		10
+					jr		c,@lt10
+					ld		a,10
+@lt10:
+					ld		c,a
+					ld		b,100
+					mlt		bc
+					call	add_to_score
 					ret	
 	
 @gotgrain:
@@ -412,9 +413,13 @@ update_harry_xy:
 					ld		b,100
 					call	snd_play_beeb_sound
 
-; TODO score points
+; score 50 points for collecting grain
+					ld		bc,50
+					call	add_to_score
 
 ; TODO stall the timer
+					ld		a,20
+					ld		(stalltime),a
 
 					ret
 ;============================================================================================================
@@ -956,7 +961,7 @@ ride_lift:
 @canmove:
 					ld		a,(harry_y)
 					cp		220
-					jr		nc,@nottop
+					jr		c,@nottop
 					ld		a,1
 					ld		(harry_killed),a
 @nottop:

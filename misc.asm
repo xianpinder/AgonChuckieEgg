@@ -258,6 +258,36 @@ itoa:
 
 ;============================================================================================================
 
+; unsigned int in HL to string in IX. leading zeros included
+
+utoz8:				ld		de,-10000000
+					call	utoz
+utoz7:				ld		de,-1000000
+					call	utoz
+utoz6:				ld		de,-100000
+					call	utoz
+utoz5:				ld		de,-10000
+					call	utoz
+utoz4:				ld		de,-1000
+					call	utoz
+utoz3:				ld		de,-100
+					call	utoz
+utoz2:				ld		de,-10
+					call	utoz
+utoz1:				ld		de,-1
+utoz:
+					ld		a,'0'-1
+@num2:				inc		a
+					add		hl,de
+					jr		c,@num2
+					sbc		hl,de
+					ld		(ix+0),a
+					inc		ix
+					ret
+
+
+;============================================================================================================
+
 hexhltoa:
 					dec		sp
 					push	hl

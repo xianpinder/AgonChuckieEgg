@@ -91,5 +91,26 @@ update_timer:
 					pop		hl
 					pop		de
 					ret
+
 ;============================================================================================================
 
+wait_delay:
+					push	de
+					push	hl
+					push	ix
+
+					ld		ix,(sys_timer_addr)
+					ld		hl,(ix+0)
+					add		hl,bc
+					ex		de,hl
+@loop:
+					ld		hl,(ix+0)
+					or		a
+					sbc		hl,de
+					jr		c,@loop
+
+					pop		ix
+					pop		hl
+					pop		de
+					ret
+;============================================================================================================

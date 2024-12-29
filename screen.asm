@@ -96,11 +96,9 @@ gfx_init_384:
 					xor		a
 					ld		(double_buffer),a
 
-					;ld		hl,vdu_palette
-					;call	vdu
-
 					ld		ix,images_384
 					call	gfx_init_bitmaps
+
 					ret
 
 vdu_startup_384:	db		16
@@ -109,6 +107,7 @@ vdu_startup_384:	db		16
 					db		23, 1, 0							; disable text cursor
 					db		5									; write text at graphics cursor
 					db		23, 0, $A0, $FF,$FF, 2				; clear all command buffers
+
 
 ;============================================================================================================
 clear_playarea:
@@ -121,10 +120,11 @@ clear_playarea:
 @vdu_clg_area:
 					db		24								; set graphics viewport
 					dw		0
-clg_area_bottom:	dw		511
-clg_area_right:		dw		383
-clg_area_top:		dw		50								; 0,539,359,50 left, bottom, right, top,
+clg_area_bottom:	dw		383
+clg_area_right:		dw		511
+clg_area_top:		dw		50								; 0,511,383,50 left, bottom, right, top,
 					db		16								; CLG
+					db		26
 vdu_clg_end:
 
 ;============================================================================================================
@@ -437,10 +437,24 @@ gfx_flush:
 					pop		hl
 					pop		bc
 					ret
+
+;============================================================================================================
+
+gfx_clear_screen:
+					ld		hl,vdu_clear_screen
+					ld		bc,2
+					jp		batchvdu
+
+;============================================================================================================
+
+gfx_graph_text:
+					ld		hl,vdu_graphics_text
+					ld		bc,1
+					jp		batchvdu
+
 ;============================================================================================================
 
 ; BC = x1, DE = y, HL = x2
-
 gfx_draw_hline:
 					push	bc
 					push	hl
@@ -1074,6 +1088,8 @@ vdu_fillrect_codes:	db		25, 101, 0, 0, 0, 0			; RECTANGLE FILL x,y
 vdu_flip_codes:		db		23, 0, $C3					; flip screen buffers
 vdu_pen_codes:		db		18, 0,0						; GCOL 0,a
 vdu_flush:			db		23, 0, $CA
+vdu_clear_screen:	db		26, 16
+vdu_graphics_text:	db		5							; VDU 5 draw text as graphics
 gfx_current_pen:	db		255
 gfx_current_paper:	db		0
 

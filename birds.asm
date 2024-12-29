@@ -45,8 +45,11 @@ rndseed:			db		0,0,0,0
 draw_birds:
 					ld		a,(num_ostriches)
 					or		a
-					jr		z,@no_osy
+					ret		z
 
+					call	gfx_vsync
+
+					ld		a,(num_ostriches)
 					ld		b,a
 					xor		a
 @osy_loop:
@@ -54,7 +57,6 @@ draw_birds:
 					inc		a
 					djnz	@osy_loop
 
-@no_osy:
 					ret
 
 ;============================================================================================================
@@ -108,7 +110,27 @@ draw_ostrich:
 					pop		af
 					ret
 
+;============================================================================================================
 
+draw_duck:
+					ld		a,(duck_x)
+					ld		d,a
+					ld		a,(duck_y)
+					ld		e,a
+					call	calc_screen_xy
+
+					ld		a,SPR_DUCK
+					call	sprite_set_xy
+
+					ld		a,(duck_anim)
+					ld		b,a
+					ld		a,SPR_DUCK
+					call	sprite_set_frame
+
+					ld		a,SPR_DUCK
+					call	sprite_draw
+
+					ret
 ;============================================================================================================
 
 
@@ -121,12 +143,122 @@ move_birds:
 
 					xor		a
 					ld		(update_counter),a
-					;call	move_duck
+					call	move_duck
 					ret
 @skipduck:
 					cp		4
-					jr		nz,move_ostriches
-					;call	decrease_time
+					jp		nz,move_ostriches
+					call	decrease_time
+					ret
+
+;============================================================================================================
+
+move_duck:
+					ld		a,(duck_anim)
+					and		2
+					ld		(duck_dir),a
+
+					ld		a,(bigbirdflag)
+					or		a
+					jr		z,@animate_duck
+	
+					ld		a,(duck_x)
+					add		a,4
+					ld		hl,harry_x
+					cp		(hl)
+					jr		nc,@duck_left
+
+; move the duck to the right
+					ld		hl,duck_x_speed
+					ld		a,(hl)
+					cp		5
+					jr		z,@skipincx
+					inc		(hl)
+@skipincx:
+					xor		a
+					ld		(duck_dir),a
+					jr		@duck_up_down
+
+; move the duck to the left
+@duck_left:
+					ld		hl,duck_x_speed
+					ld		a,(hl)
+					cp		-5
+					jr		z,@skipdecx
+					dec		(hl)
+@skipdecx:
+					ld		a,2
+					ld		(duck_dir),a
+
+
+@duck_up_down:
+					ld		a,(harry_y)
+					add		a,4
+					ld		hl,duck_y
+					cp		(hl)
+					jr		c,@duck_down
+
+; move the duck up
+					ld		hl,duck_y_speed
+					ld		a,(hl)
+					cp		5
+					jr		z,@skipincy
+					inc		(hl)
+@skipincy:
+					jr		@check_bottom
+
+; move the duck down
+@duck_down:
+					ld		hl,duck_y_speed
+					ld		a,(hl)
+					cp		-5
+					jr		z,@check_bottom
+					dec		(hl)
+
+; check if the duck is at the bottom of the screen
+@check_bottom:
+					ld		a,(duck_y)
+					ld		hl,duck_y_speed
+					add		a,(hl)
+					cp		40
+					jr		nc,@check_sides
+
+; bounce duck off the bottom
+					ld		a,(duck_y_speed)
+					neg
+					ld		(duck_y_speed),a
+
+; check if duck has hit sides of screen
+@check_sides:
+					ld		a,(duck_x)
+					ld		hl,duck_x_speed
+					add		a,(hl)
+					cp		144
+					jr		c,@animate_duck
+
+; bounce duck off the sides
+					ld		a,(duck_x_speed)
+					neg
+					ld		(duck_x_speed),a
+	
+@animate_duck:
+					ld		hl,duck_x
+					ld		a,(duck_x_speed)
+					add		a,(hl)
+					ld		(hl),a
+
+					ld		hl,duck_y
+					ld		a,(duck_y_speed)
+					add		a,(hl)
+					ld		(hl),a
+
+					ld		a,(duck_anim)
+					and		1
+					xor		1
+					ld		hl,duck_dir
+					or		(hl)
+					ld		(duck_anim),a
+
 					ret
 
 ;============================================================================================================
@@ -440,6 +572,113 @@ countsetbits:
 					pop		bc
 					ret
 
+;============================================================================================================
+
+; ostrich info
+;OS_PX:				EQU		0		; pixel x
+;OS_PY:				EQU		1		; pixel y
+;OS_CX:				EQU		2		; cell	x
+;OS_CY:				EQU		3		; cell	y
+;OS_STATUS:			EQU		4		; status
+;OS_ANIM:			EQU		5		; animation frame
+;OS_DIR:				EQU		6		; direction
+
+
+check_collisions:
+
+;	LDA numbirds:BEQ checkcollisionbigbird
+					ld		a,(num_ostriches)
+					or		a
+					jr		z,checkcollisionbigbird
+
+					ld		b,a
+
+; Check collision with walking birds
+;	LDA #0:STA temp3
+					ld		ix,ostrich_info
+
+checkcollisionbirdloop:
+;	LDX temp3									; temp3 = bird number
+	
+	; Check overlap in X
+;	LDA birdpixelx,X:SEC:SBC playerx
+;	CLC:ADC #5
+;	CMP #11:BCS birdnotcollided					; not this one, skip straight to next one
+
+					ld		a,(ix+OS_PX)
+					ld		hl,harry_x
+					sub		a,(hl)
+					add		a,5
+					cp		11
+					jr		nc,birdnotcollided
+
+	; Check overlap in Y
+;	LDA birdpixely,X:SEC:SBC #1:SBC playery
+;	CLC:ADC #14
+;	CMP #29:BCS birdnotcollided
+
+					ld		a,(ix+OS_PY)
+					ld		hl,harry_y
+					dec		a
+					sub		(hl)
+					add		a,14
+					cp		29
+					jr		nc,birdnotcollided
+
+; Collided with a bird!
+;	INC playerdieflag
+					ld		a,1
+					ld		(harry_killed),a
+
+birdnotcollided:
+;	INC temp3:LDA temp3:CMP numbirds
+;	BCC checkcollisionbirdloop
+
+					lea		ix,ix+OSY_INF_SIZE
+					djnz	checkcollisionbirdloop
+
+	; Check collision with big bird
+checkcollisionbigbird:
+;	LDA bigbirdflag:BEQ exitcheckcollisions
+
+					ld		a,(bigbirdflag)
+					or		a
+					ret		z
+
+	; Check overlap in X
+;	LDA bigbirdxpos:CLC:ADC #4
+;	SEC:SBC playerx
+;	CLC:ADC #5
+;	CMP #11:BCS exitcheckcollisions
+	
+					ld		a,(duck_x)
+					add		a,4
+					ld		hl,harry_x
+					sub		(hl)
+					add		a,5
+					cp		11
+					ret		nc
+
+	; Check overlap in Y
+;	LDA bigbirdypos:SEC:SBC #5
+;	SBC playery
+;	CLC:ADC #14
+;	CMP #29:BCS exitcheckcollisions
+
+					ld		a,(duck_y)
+					sub		a,5
+					ld		hl,harry_y
+					sub		(hl)
+					add		a,14
+					cp		29
+					ret		nc
+
+	; Collided with the big bird
+;	INC playerdieflag
+					ld		a,1
+					ld		(harry_killed),a
+					ret
+	
 ;============================================================================================================
 
 rnd_init:

@@ -16,7 +16,7 @@
 ; Written by Christian Pinder. 2024
 ;============================================================================================================
 
-MAX_SPRITES:		EQU		10
+MAX_SPRITES:		EQU		20
 SPR_INF_SIZE:		EQU		50
 
 ; Four types of sprite are supported:
@@ -25,7 +25,7 @@ SPR_INF_SIZE:		EQU		50
 ;					 Use this if you are double-buffering and re-drawing the playfield every frame.
 ;
 ; SPR_TYPE_XOR:		 Xor on, Xor off. Simple sprite that uses xor to write and remove it.
-;					 If the sprite goes over something then the colours will look odd. You can use the palette to fix this.
+;					 If the sprite goes over something then the colours will look odd.
 ;
 ; SPR_TYPE_SAVEBACK: Saves the background before painting the sprite. Uses saved background to erase sprite.
 ;					 Doesn't play well with overlapping sprites. Very fussy about the draw order.

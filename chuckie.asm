@@ -51,8 +51,13 @@ IMG_LET_K:			EQU		29
 IMG_LET_I:			EQU		30
 IMG_LET_E:			EQU		31
 IMG_LET_G:			EQU		32
+IMG_DUCK_RIGHT_1:	EQU		33
+IMG_DUCK_RIGHT_2:	EQU		34
+IMG_DUCK_LEFT_1:	EQU		35
+IMG_DUCK_LEFT_2:	EQU		36
+IMG_LIFE:			EQU		37
 
-IMG_NUM_BITMAPS:	EQU		33
+IMG_NUM_BITMAPS:	EQU		38
 
 SPR_HARRY:			EQU		0
 SPR_LIFT1:			EQU		1
@@ -62,6 +67,7 @@ SPR_OSTRICH2:		EQU		4
 SPR_OSTRICH3:		EQU		5
 SPR_OSTRICH4:		EQU		6
 SPR_OSTRICH5:		EQU		7
+SPR_DUCK:			EQU		8
 
 GRID_WIDTH:			EQU		20
 GRID_HEIGHT:		EQU		25
@@ -136,75 +142,104 @@ main:
 					call	update_gtime
 					call	create_sprites
 					call	init_sounds
-
+@begin:
 					call	title_screen
 
-					xor		a
+					call	new_game
+@new_level:
+					call	reset_bonus
 					call	expand_level
-					call	init_level
-					call	init_harry
-					call	gfx_vsync
-					call	draw_level
-					call	gfx_flip
-					call	gfx_present
-
+@restart:
+					call	start_level
 @game_loop:
 					call	gfx_vsync
-
-					ld		c,0
-					ld		a,KBD_1
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_2
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_3
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_4
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_5
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_6
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_7
-					call	kbd_check_pressed
-					call	nz,change_level
-
-					inc		c
-					ld		a,KBD_8
-					call	kbd_check_pressed
-					call	nz,change_level
 
 					call	move_lift
 					call	move_harry
 					call	move_birds
+					call	check_collisions
 
 					call	draw_lifts
 					call	draw_harry
+					call	draw_duck
 					call	harry_sounds
-					call	gfx_vsync
 					call	draw_birds
 
 					call	gfx_flip
 					call	gfx_present
 
+					ld		a,(num_eggs)
+					or		a
+					jr		nz,@stilleggs
+
+					call	award_bonus
+					ld		hl,level
+					inc		(hl)
+					jr		@new_level
+@stilleggs:
+					ld		a,(harry_killed)
+					or		a
+					jr		nz,@harrydead
+
+					ld		a,(harry_y)
+					cp		19
+					jr		c,@harrydead
+
 					jp		@game_loop
+
+
+@harrydead:
+					call	play_tune
+					ld		hl,lives
+					dec		(hl)
+					jr		nz,@restart
+
+					call	game_over
+					call	check_hiscore
+
+					jp		@begin
+
+;============================================================================================================
+
+play_tune:
+					ld		ix,@tune_data
+					ld		b,(ix+0)
+					inc		ix
+@loop:
+					push	bc
+
+					ld		c,2						; channel 2
+					ld		b,126					; target volume 126
+					ld		l,(ix+0)
+					ld		h,(ix+1)				; read pitch
+					ld		e,(ix+2)
+					ld		d,(ix+3)				; read duration
+					call	snd_play_sound
+
+					lea		ix,ix+4
+					pop		bc
+					djnz	@loop
+					ret
+@tune_data:
+					db		16					; number of notes
+
+; pairs of pitch and duration
+					dw		200,	200
+					dw		224,	100
+					dw		200,	200
+					dw		178,	100
+					dw		168,	200
+					dw		133,	100
+					dw		150,	200
+					dw		126,	100
+					dw		133,	600
+					dw		133,	50
+					dw		150,	50
+					dw		168,	50
+					dw		178,	50
+					dw		200,	50
+					dw		252,	50
+					dw		267,	50
 
 ;============================================================================================================
 
@@ -260,12 +295,22 @@ create_sprites:
 					ld		b,10
 					ld		hl,ostrich_frames
 					call	sprite_create
+
+					ld		a,SPR_DUCK
+					ld		c,SPR_TYPE_XORBACK
+					ld		b,4
+					ld		hl,duck_frames
+					call	sprite_create
+
 					ret
 
 ;============================================================================================================
 
 init_sounds:
 					ld		hl,vol_env_1
+					call	snd_set_vol_env
+
+					ld		hl,vol_env_2
 					call	snd_set_vol_env
 
 					ld		hl,vol_env_3
@@ -279,23 +324,95 @@ vol_env_1:			db		1			; channel 1
 					db		0			; no sustain
 					dw		0			; no release
 
-vol_env_3:			db		0			; channel 1
+vol_env_2:			db		2			; channel 2
+					dw		2			; attack for 10ms
+					dw		19			; decay for 130ms
+					db		127			; sustain at target volume
+					dw		29			; release for 200ms
+
+vol_env_3:			db		0			; channel 0
 					dw		20			; attack for 10ms
 					dw		0			; no decay
 					db		127			; sustain at target volume
 					dw		10			; release for 10ms
 
 ;============================================================================================================
-
-change_level:
-					push	bc
-					ld		a,c
-					call	expand_level
+start_level:
 					call	init_level
 					call	init_harry
+					call	ready_player
+					call	gfx_vsync
 					call	draw_level
-					pop		bc
+					call	gfx_flip
+					call	gfx_present
 					ret
+;============================================================================================================
+
+ready_player:
+					call	gfx_vsync
+					call	gfx_clear_screen
+					call	gfx_graph_text
+
+					ld		a,GFX_PEN_YELLOW
+					call	gfx_set_pen
+
+					ld		a,15
+					ld		hl,txt_get_ready
+					call	gfx_write_centre_text
+
+					ld		a,GFX_PEN_CYAN
+					call	gfx_set_pen
+
+					ld		a,17
+					ld		hl,txt_player_1
+					call	gfx_write_centre_text
+
+					call	gfx_present
+
+					ld		bc,120*3
+					call	wait_delay
+
+					ret
+
+
+txt_get_ready:		db		"Get Ready",0
+txt_player_1:		db		"Player 1",0
+
+
+;============================================================================================================
+
+game_over:
+					ld		hl,vdu_gm_rect
+					ld		bc,vdu_gm_rect_end - vdu_gm_rect
+					call	batchvdu
+
+					call	gfx_graph_text
+
+					ld		a,GFX_PEN_CYAN
+					call	gfx_set_pen
+
+					ld		a,22
+					ld		hl,txt_game_over
+					call	gfx_write_centre_text
+
+					ld		a,24
+					ld		hl,txt_player_1
+					call	gfx_write_centre_text
+
+					call	gfx_present
+
+					ld		bc,120*3
+					call	wait_delay
+					ret
+
+txt_game_over:		db		"G A M E   O V E R",0
+
+vdu_gm_rect:		db		18, 0, 0					; GCOL 0,0
+					db		25, 4						; MOVE
+					dw		112,183						; 112,183
+					db		25,$65						; RECTANGLE
+					dw		403,258						; 403,258
+vdu_gm_rect_end:
 
 ;============================================================================================================
 
@@ -352,6 +469,171 @@ draw_lifts:
 
 ;============================================================================================================
 
+add_to_score:
+					ld		hl,(score)
+					add		hl,bc
+					ld		(score),hl
+					ld		hl,(score_extra)
+					add		hl,bc
+					ld		(score_extra),hl
+					ld		bc,10000
+					or		a
+					sbc		hl,bc
+					jr		c,draw_score
+					ld		(score_extra),hl
+					ld		hl,lives
+					inc		(hl)
+					call	draw_lives
+draw_score:
+					ld		hl,(score)
+					ld		ix,@txt_score_num
+					call	utoz7
+
+					ld		hl,@txt_score
+					ld		bc,@txt_score_end - @txt_score
+					call	batchvdu
+
+					ret
+
+@txt_score:			db		31,11,2
+@txt_score_num:		db		"0000000"
+@txt_score_end:
+
+;============================================================================================================
+decrease_time:
+					ld		a,(stalltime)
+					or		a
+					jr		z,@nostall
+					dec		a
+					ld		(stalltime),a
+					ret
+@nostall:
+					ld		hl,(countdown)
+					dec		hl
+					ld		(countdown),hl
+
+					ld		a,h
+					or		l
+					jr		nz,@stilltime
+					ld		a,1
+					ld		(harry_killed),a
+@stilltime:
+					call	draw_time
+
+					ld		hl,(bonus)
+					ld		a,l
+					or		h
+					ret		z
+
+; every 5 ticks the bonus is decreased by 10 points
+
+					ld		a,(bonus_ticker)
+					dec		a
+					ld		(bonus_ticker),a
+					ret		nz
+
+					ld		a,5
+					ld		(bonus_ticker),a
+
+decrease_bonus:
+					ld		hl,(bonus)
+					ld		bc,-10
+					add		hl,bc
+					ld		(bonus),hl
+				
+draw_bonus:
+					ld		hl,(bonus)
+					ld		ix,@txt_bonus_num
+					call	utoz4
+
+					ld		hl,@txt_bonus
+					ld		bc,@txt_bonus_end - @txt_bonus
+					call	batchvdu
+
+					ret
+
+@txt_bonus:			db		31,42,4
+@txt_bonus_num:		db		"0000"
+@txt_bonus_end:	
+
+
+draw_time:
+					ld		hl,(countdown)
+					ld		ix,@txt_time_num
+					call	utoz3
+
+					ld		hl,@txt_time
+					ld		bc,@txt_time_end - @txt_time
+					call	batchvdu
+
+					ret
+
+@txt_time:			db		31,58,4
+@txt_time_num:		db		"000"
+@txt_time_end:
+
+
+;============================================================================================================
+
+award_bonus:
+					xor		a
+@bonus_loop:
+					push	af
+					call	gfx_vsync
+
+					ld		b,4
+@decbonus:
+					ld		hl,(bonus)
+					ld		a,h
+					or		l
+					jr		z,@done
+					push	bc
+					ld		bc,10
+					call	add_to_score
+					call	decrease_bonus
+					pop		bc
+					djnz	@decbonus
+
+					pop		af
+					push	af
+					or		a
+					jr		nz,@nosound
+
+					ld		a,4					; high pitch noise
+					ld		c,0					; channel 0 (noise)
+					ld		d,1					; duration 1/20th second			
+					ld		b,100				; target volume 100
+					call	snd_play_beeb_sound
+@nosound:
+					call	gfx_present
+
+					pop		af
+					xor		1
+					jr		@bonus_loop
+@done:
+					pop		af
+					call	gfx_present
+					ld		bc,120
+					call	wait_delay
+					ret
+
+;============================================================================================================
+
+
+; starting a new game
+new_game:
+					ld		a,5
+					ld		(lives),a
+					or		a
+					sbc		hl,hl
+					ld		(score),hl
+					ld		(score_extra),hl
+					xor		a
+					ld		(level),a
+					ret
+
+
+;============================================================================================================
 
 init_harry:
 					ld		b,60
@@ -374,6 +656,17 @@ init_harry:
 					xor		a
 					ld		(which_lift),a
 
+; set initial position of the duck
+
+					ld		a,4
+					ld		(duck_x),a
+					ld		a,204
+					ld		(duck_y),a
+					xor		a
+					ld		(duck_x_speed),a
+					ld		(duck_y_speed),a
+					ld		(duck_anim),a
+
 ; determine how many birds appear
 
 					ld		hl,num_ostriches
@@ -390,7 +683,7 @@ init_harry:
 @notphase1or3:
 
 ; init ostriches
-					ld		b,(hl)
+					ld		b,5
 					ld		ix,ostrich_info
 @initbirdloop:
 					ld		a,(ix+OS_CX)
@@ -453,8 +746,10 @@ init_level:
 
 					xor		a
 					ld		(extralifeflag),a
-					ld		(playerdieflag),a
+					ld		(harry_killed),a
 					ld		(stalltime),a
+					ld		hl,900
+					ld		(countdown),hl
 
 					call	rnd_init
 
@@ -475,10 +770,30 @@ init_level:
 
 					ret	
 
+;============================================================================================================
+
+reset_bonus:
+					ld		a,(level)
+					inc		a
+					cp		10
+					jr		c,@lt10
+					ld		a,9
+@lt10:
+					ld		l,a
+					ld		h,250
+					mlt		hl
+					add		hl,hl
+					add		hl,hl						; HL = A * 1000
+					ld		(bonus),hl
+
+					ld 		a,5
+					ld		(bonus_ticker),a
+					ret
 
 ;============================================================================================================
 
 expand_level:
+					ld		a,(level)
 					and		7
 					ld		hl,level_array
 					call	index_array
@@ -672,11 +987,36 @@ get_grid_cell:
 
 ;============================================================================================================
 
+draw_lives:
+					ld		a,(lives)
+					dec		a
+					ret		z
+					cp		7
+					jr		c,@skipmax
+					ld		a,7
+@skipmax:
+					ld		ix,80
+@loop:
+					push	af
+
+					ld		a,IMG_LIFE
+					lea		bc,ix+0
+					ld		de,26
+					call	gfx_draw_bitmap
+
+					pop		af
+					lea		ix,ix+10
+					dec		a
+					jr		nz,@loop
+					ret
+
+;============================================================================================================
+
 draw_level:
 					call	clear_playarea
 					ld		a,IMG_CAGE
 					ld		bc,16
-					ld		de,47
+					ld		de,51
 					call	gfx_draw_bitmap
 
 					ld		hl,level_grid
@@ -696,8 +1036,38 @@ draw_level:
 					cp		GRID_HEIGHT
 					jr		nz,@do_cell
 
-					call	gfx_flush
+					ld		hl,txt_top_info
+					ld		bc,txt_top_info_end - txt_top_info
+					call	batchvdu
+
+					ld		ix,@txt_level_num
+					ld		a,(level)
+					inc		a
+					push	af
+					or		a
+					sbc		hl,hl
+					ld		l,a
+					call	utoz3
+
+					pop		af
+					cp		100
+					jr		nc,@is3digits
+					ld		a,32
+					ld		(@txt_level_num),a
+@is3digits:
+					ld		hl,@txt_level
+					ld		bc,@txt_level_end - @txt_level
+					call	batchvdu
+
+					call	draw_score
+					call	draw_time
+					call	draw_bonus
+					call	draw_lives
 					ret
+
+@txt_level:			db		31,24,4
+@txt_level_num:		db		" 00"
+@txt_level_end:	
 
 ;============================================================================================================
 
@@ -787,6 +1157,13 @@ lift1_y:			db		0
 lift2_y:			db		0
 which_lift:			db		0
 
+duck_x:				db		0
+duck_y:				db		0
+duck_dir:			db		0
+duck_x_speed:		db		0
+duck_y_speed:		db		0
+duck_anim:			db		0
+
 harry_killed:		db		0
 update_counter:		db		0
 level:				db		0
@@ -796,8 +1173,14 @@ bigbirdflag:		db		0
 currentbirdindex:	db		0
 birdwalkingspeed:	db		0
 extralifeflag:		db		0
-playerdieflag:		db		0
+;playerdieflag:		db		0
 stalltime:			db		0
+lives:				db		0
+score:				dl		0
+score_extra:		dl		0
+countdown:			dl		0
+bonus:				dl		0
+bonus_ticker:		db		0
 
 harry_frames:		db		IMG_HARRY_RIGHT_1, IMG_HARRY_RIGHT_2, IMG_HARRY_RIGHT_3
 					db		IMG_HARRY_LEFT_1, IMG_HARRY_LEFT_2, IMG_HARRY_LEFT_3
@@ -809,12 +1192,31 @@ ostrich_frames:		db		IMG_OSY_RIGHT_1, IMG_OSY_RIGHT_2, IMG_OSY_LEFT_1, IMG_OSY_L
 					db		IMG_OSY_CLIMB_1, IMG_OSY_CLIMB_2
 					db		IMG_OSY_EAT_RIGHT_1, IMG_OSY_EAT_RIGHT_2, IMG_OSY_EAT_LEFT_1, IMG_OSY_EAT_LEFT_2
 
+duck_frames:		db		IMG_DUCK_RIGHT_1, IMG_DUCK_RIGHT_2, IMG_DUCK_LEFT_1, IMG_DUCK_LEFT_2
+
 key_num_up:			db		KBD_A
 key_num_down:		db		KBD_Z
 key_num_left:		db		KBD_COMMA
 key_num_right:		db		KBD_PERIOD
 key_num_jump:		db		KBD_SPACE
 key_bits:			db		0
+
+
+txt_top_info:		db		4
+					db		17,13,17,128
+					db		31,2,1
+					db		"_______ _________"
+					db		31,2,3
+					db		"__________     ___________       ____________     __________"
+					db		17,0,17,128+13
+					db		31,2,2
+					db		" SCORE ",9," 0000000 "
+					db		31,2,4
+					db		" PLAYER 1 ",9,9,9,9,9
+					db		" LEVEL  01 ",9,9,9,9,9,9,9
+					db		" BONUS 0000 ",9,9,9,9,9
+					db		" TIME 000 "
+txt_top_info_end:
 
 ;============================================================================================================
 
@@ -852,6 +1254,11 @@ images_384:
 					dl		let_i_img
 					dl		let_e_img
 					dl		let_g_img
+					dl		duckright1_img
+					dl		duckright2_img
+					dl		duckleft1_img
+					dl		duckleft2_img
+					dl		life_img
 
 
 blank384_img:		db		24,12
@@ -937,6 +1344,19 @@ let_e_img:			db		45,45
 					incbin	"gfx/lete.raw"
 let_g_img:			db		45,45
 					incbin	"gfx/letg.raw"
+
+duckright1_img:		db		48,36
+					incbin	"gfx/duckright1.raw"
+duckright2_img:		db		48,36
+					incbin	"gfx/duckright2.raw"
+duckleft1_img:		db		48,36
+					incbin	"gfx/duckleft1.raw"
+duckleft2_img:		db		48,36
+					incbin	"gfx/duckleft2.raw"
+
+life_img:			db		9,3
+					incbin	"gfx/life.raw"
+
 
 ;============================================================================================================
 sys_timer_addr:		dl		0

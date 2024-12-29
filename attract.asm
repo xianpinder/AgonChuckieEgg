@@ -27,9 +27,7 @@ title_screen:
 					xor		a
 					ld		(@attract_screen),a
 
-					ld		hl,vdu_clear_screen
-					ld		bc,2
-					call	batchvdu
+					call	gfx_clear_screen
 
 					call	logo_and_stuff
 @attract:
@@ -137,9 +135,7 @@ key_select:
 
 					call	gfx_vsync
 
-					ld		hl,vdu_clear_screen
-					ld		bc,2
-					call	batchvdu
+					call	gfx_clear_screen
 
 					ld		a,GFX_PEN_YELLOW
 					call	gfx_set_pen
@@ -282,6 +278,8 @@ logo_and_stuff:
 ;============================================================================================================
 
 update_highscores:
+					push	ix
+					push	iy
 					ld		c,0
 					ld		b,10
 					ld		iy,high_scores
@@ -308,17 +306,117 @@ update_highscores:
 
 					inc		c
 					djnz	@loop
+					pop		iy
+					pop		ix
 					ret
+
+;============================================================================================================
+
+check_hiscore:
+					ld		de,(score)
+					ld		b,10
+					ld		ix,high_scores
+@loop:
+					ld		hl,(ix+0)
+					or		a
+					sbc		hl,de
+					jr		c,@got_hiscore
+					lea		ix,ix+11
+					djnz	@loop
+					ret
+@got_hiscore:
+					push	bc
+					dec		b
+					jr		z,@noshift
+					ld		c,11
+					mlt		bc
+
+					ld		hl,high_scores_end-12
+					ld		de,high_scores_end-1
+					lddr
+@noshift:
+; set the high score to the player's score
+					ld		hl,(score)
+					ld		(ix+0),hl
+
+; blank out the name ready to enter the player's name
+					lea		hl,ix+3
+					ld		(@name_addr),hl
+					ld		b,8
+					ld		a,32
+@blank:
+					ld		(hl),a
+					inc		hl
+					djnz	@blank
+
+					call	update_highscores
+
+					call	gfx_graph_text
+					call	clear_playarea
+
+					ld		a,GFX_PEN_YELLOW
+					call	gfx_set_pen
+
+					ld		a,10
+					ld		hl,txt_highscores
+					call	gfx_write_centre_text
+
+					ld		a,34
+					ld		hl,txt_enter_name
+					call	gfx_write_centre_text
+
+					ld		a,GFX_PEN_MAGENTA
+					call	gfx_set_pen
+
+					ld		a,36
+					ld		hl,txt_player_1
+					call	gfx_write_centre_text
+
+					ld		hl,txt_hiscore_table
+					call	gfx_draw_text
+
+					pop		bc
+					ld		a,10
+					sub		b
+					add		a,a
+					add		a,12
+					ld		(txt_arrow+3),a
+					ld		hl,txt_arrow
+					call	gfx_draw_text
+
+					call	gfx_present
+
+					ld		hl,@playersname
+					ld		bc,9
+					ld		e,1+4+8
+					ld		a,9
+					rst.lil	$8						; MOS edit_line
+
+					ld		hl,@playersname
+					ld		de,(@name_addr)
+					ld		b,8
+@copy:
+					ld		a,(hl)
+					or		a
+					jr		z,@donecopy
+					ld		(de),a
+					inc		hl
+					inc		de
+					djnz	@copy
+@donecopy:
+					call	update_highscores
+					ret
+
+@playersname:		ds		9
+@name_addr:			dl		0
 
 ;============================================================================================================
 
 attract_timer:		dl      0,0,0,0
 
-vdu_clear_screen:
-					db		26,16
-
 txt_instruct:		db		4
 					db		31,15,42
+					db		17,128
 					db		17,11,"Press "
 					db		17,14,"S"
 					db		17,11," to start, "
@@ -326,6 +424,12 @@ txt_instruct:		db		4
 					db		17,11," to change keys"
 					db		5
 txt_instruct_end:
+
+txt_enter_name:		db		"ENTER YOUR NAME",0
+
+txt_arrow:			db		1,GFX_PEN_YELLOW
+					db		2,12,74
+					db		">",0
 
 txt_key:			db		"K E Y",0
 txt_selection:		db		"S E L E C T I O N",0
@@ -343,7 +447,7 @@ txt_credits3:		db		"Game design by Nigel Alderton",0
 txt_credits4:		db		"BBC Micro port by Doug Anderson",0
 txt_credits5:		db		"Agon port by Christian Pinder",0
 
-txt_highscores:		db		"H I G H S C O R E S",0
+txt_highscores:		db		"H I G H   S C O R E S",0
 
 txt_hiscore_table:
 					db		1,GFX_PEN_GREEN
@@ -381,6 +485,7 @@ high_scores:
 					db		"A&F     "
 					dl		1000
 					db		"A&F     "
+high_scores_end:
 
 title_letters:
 					db		IMG_LET_C

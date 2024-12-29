@@ -15,6 +15,9 @@
 ; Written by Christian Pinder. 2024
 ;
 ;============================================================================================================
+
+sysvar_audioSuccess:	EQU	$0E			; 1: Audio channel note queued (0 = no, 1 = yes)
+
 snd_init:
 					ld		hl,vdu_snd_init
 					ld		bc,vdu_snd_init_end - vdu_snd_init
@@ -63,9 +66,24 @@ snd_play_sound:
 					ld		(ix+7),h
 					ld		(ix+8),e
 					ld		(ix+9),d
-					lea		hl,ix+0
+
+					ld		ix,(mos_vars_addr)
+
+@send:
+; reset the vdp_pflag_audio bit of sysvar_vpd_pflags
+					res		3, (ix+4)
+
+					ld		hl,vdu_play_sound
 					ld		bc,10
-					call	batchvdu
+					rst.lil	$18
+
+; wait until the audio subsystem sends result back
+@wait:				bit		3, (ix+4)
+					jr		z, @wait
+
+					ld		a, (ix+sysvar_audioSuccess)
+					or		a
+					jr		z, @send
 
 					pop		ix
 					ret
@@ -120,7 +138,7 @@ snd_play_beeb_sound:
 					ld		a,l
 					cp		4
 					jr		nz,@nothigh
-					ld		hl,120
+					ld		hl,80
 					jr		@setnoise
 @nothigh:
 					cp		5
