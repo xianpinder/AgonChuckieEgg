@@ -119,7 +119,9 @@ check_harry_keys:
 					ld		a,(key_num_jump)
 					call	@check_move_key
 
-					ld		a,b
+					call	inp_read_joy1
+					or		b						; combine the keys and the joypad buttons
+
 					ld		(key_bits),a
 					ret
 

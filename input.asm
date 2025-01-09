@@ -18,6 +18,48 @@
 
 ;============================================================================================================
 ;
+; Joypad/Joystick routines
+;
+;============================================================================================================
+
+PC_DR:				EQU 	$9E				; GPIO Port C Data Register
+PD_DR:				EQU 	$A2				; GPIO Port D Data Register
+
+; inp_read_joy1: A = joypad 1 buttons pressed
+;	7	6	5	4	3	2	1	0
+;	-	-	F2	F1	U	D	L	R
+inp_read_joy1:
+					push	bc
+					ld		b,0
+					in0		a,(PD_DR)
+					cpl
+					add		a,a
+					rl		b				; rotate in fire 2
+					add		a,a
+					add		a,a
+					rl		b				; rotate in fire 1
+
+					in0		a,(PC_DR)
+					cpl
+					rra
+					rra
+					rl		b				; rotate in up
+					rra
+					rra
+					rl		b				; rotate in down
+					rra
+					rra
+					rl		b				; rotate in left
+					rra
+					rra
+					rl		b				; rotate in right
+					ld		a,b
+					pop		bc
+					ret
+
+
+;============================================================================================================
+;
 ; Keyboard routines
 ;
 ;============================================================================================================
