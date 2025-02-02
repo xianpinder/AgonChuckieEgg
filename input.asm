@@ -25,10 +25,32 @@
 PC_DR:				EQU 	$9E				; GPIO Port C Data Register
 PD_DR:				EQU 	$A2				; GPIO Port D Data Register
 
+joy_enabled:		db		0
+
+joy_init:
+; Try to detect if there is a joystick interface attached.
+; If PC_DR doesn't return all bits set (255) when starting up
+; then we disable the joystick code.
+
+					ld		b,0
+					in0		a, (PC_DR)
+					cp		255
+					jr		nz,@notenabled
+					inc		b
+@notenabled:
+					ld		a,b
+					ld		(joy_enabled),a
+					ret
+
+
 ; inp_read_joy1: A = joypad 1 buttons pressed
 ;	7	6	5	4	3	2	1	0
 ;	-	-	F2	F1	U	D	L	R
 inp_read_joy1:
+					ld		a,(joy_enabled)
+					or		a
+					ret		z
+
 					push	bc
 					ld		b,0
 					in0		a,(PD_DR)

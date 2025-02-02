@@ -136,6 +136,7 @@ main:
 					ret
 @newmodes:
                     call    gfx_init_384
+					call	joy_init
 					call	kbd_init
 					call	snd_init
 					call	initbatchvdu
